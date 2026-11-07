@@ -13,13 +13,13 @@ A Claude Code mod that keeps weekly token usage down and adds a compact usage ba
 At the prompt of a Claude Code terminal session:
 
 ```
-/plugin install token-saver --marketplace FelixForLyfe/token-saver-mods
+/plugin install token-saver --marketplace FelixForLyfe/token-saver
 ```
 
 From a shell:
 
 ```
-claude plugin install token-saver --marketplace FelixForLyfe/token-saver-mods
+claude plugin install token-saver --marketplace FelixForLyfe/token-saver
 ```
 
 Set the `notesDir` plugin setting to a folder that exists on your machine (default is `D:/Claude/token-saver-notes`).
