@@ -1,6 +1,7 @@
 {
   "name": "token-saver",
   "version": "0.4.6",
+  "license": "MIT",
   "description": "Keeps weekly token usage down (early compaction with a notes file, cheaper models, effort cap, subagent trimming, pacing note) and adds a usage bar with a settings menu above the prompt.",
   "license": "MIT",
   "keywords": [

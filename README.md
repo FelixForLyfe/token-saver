@@ -23,3 +23,9 @@ claude plugin install token-saver --marketplace FelixForLyfe/token-saver
 ```
 
 Set the `notesDir` plugin setting to a folder that exists on your machine (default is `D:/Claude/token-saver-notes`).
+
+## Docs and license
+
+How it works: https://felixforlyfe.github.io/token-saver/
+
+MIT licensed, see [LICENSE](LICENSE). Contributions welcome.

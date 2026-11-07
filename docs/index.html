@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Token Saver: a Claude Code mod that keeps weekly token usage down.">
+<title>Token Saver</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow reading column, a live-looking usage bar as the hero, then short sections. */
+:root{
+  --bg:#f6f7f4; --surface:#ffffff; --fg:#1d2420; --muted:#5d6a62; --line:#dde2dc;
+  --accent:#0f7a5c; --accent-fg:#ffffff; --warn:#b4650a; --code:#eef1ec;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'Source Sans 3','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111613; --surface:#1a211d; --fg:#e7ece8; --muted:#9aa89f; --line:#2a342e;
+  --accent:#3fc59a; --accent-fg:#06231a; --warn:#e9a23b; --code:#202a24; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#1a211d; --fg:#e7ece8; --muted:#9aa89f; --line:#2a342e;
+  --accent:#3fc59a; --accent-fg:#06231a; --warn:#e9a23b; --code:#202a24; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:17px/1.6 var(--body);
+  padding-block:48px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,6vw,3.2rem);letter-spacing:-.02em}
+h2{font-size:1.6rem;margin-bottom:14px;letter-spacing:-.01em}
+h3{font-size:1.1rem;margin-bottom:4px}
+p{margin:0 0 12px}
+.lead{font-size:1.2rem;color:var(--muted);max-width:56ch}
+.eyebrow{font:600 .8rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+code,pre{font-family:var(--mono);font-size:.88rem}
+code{background:var(--code);padding:1px 6px;border-radius:4px}
+.cmd{display:flex;gap:8px;align-items:stretch;margin:10px 0}
+.cmd pre{margin:0;flex:1;min-width:0;overflow-x:auto;background:var(--code);border:1px solid var(--line);border-radius:6px;padding:12px 14px;white-space:pre}
+button{font:600 .9rem var(--body);background:var(--accent);color:var(--accent-fg);border:0;border-radius:6px;padding:0 16px;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+/* mock bar */
+.bar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:28px;font:.85rem/1.9 var(--mono);overflow-x:auto}
+.bar .row{display:flex;gap:22px;white-space:nowrap}
+.fill{color:var(--accent)} .hot{color:var(--warn)} .dim{color:var(--muted)}
+.bar small{display:block;font:.75rem var(--body);color:var(--muted);margin-top:6px}
+/* steps & grids */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px 28px}
+.grid>div{min-width:0}
+.grid p{color:var(--muted);margin:0}
+ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px}
+ol.steps li{display:grid;grid-template-columns:auto 1fr;gap:14px}
+ol.steps b{font:600 .85rem var(--mono);color:var(--accent);padding-top:3px}
+ol.steps p{margin:0}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.95rem}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font:600 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-weight:600;white-space:nowrap}
+.note{border-left:3px solid var(--warn);padding:2px 0 2px 14px;color:var(--muted)}
+footer{color:var(--muted);font-size:.9rem;border-top:1px solid var(--line);padding-top:20px}
+@media(prefers-reduced-motion:no-preference){button{transition:filter .15s}button:hover{filter:brightness(1.1)}}
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <div class="eyebrow">A Claude Code mod</div>
+  <h1>Token Saver</h1>
+  <p class="lead">Stops long sessions from eating your weekly limit. It compacts early, uses a cheaper model for routine steps, and puts a usage bar above your prompt so you can see where you stand.</p>
+  <div class="bar" aria-label="Example of the usage bar">
+    <div class="row">
+      <span>Context <span class="fill">▰▰▰▰▰▰</span><span class="dim">▱▱▱▱</span> 96k</span>
+      <span>5-hour <span class="fill">▰▰</span><span class="dim">▱▱▱▱▱▱▱▱</span> 21%</span>
+      <span>Week <span class="hot">▰▰▰▰▰▰▰</span><span class="dim">▱▱▱</span> 68%</span>
+      <span>[Compact] [⚙ Settings]</span>
+    </div>
+    <small>Example only. The real bar sits above your prompt and updates as you work.</small>
+  </div>
+</header>
+
+<section>
+  <h2>Install</h2>
+  <p>Type this at the prompt of a Claude Code terminal session, then answer <code>y</code> to add the marketplace and pick a scope:</p>
+  <div class="cmd"><pre id="c1">/plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c1">Copy</button></div>
+  <p>Or from a shell:</p>
+  <div class="cmd"><pre id="c2">claude plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c2">Copy</button></div>
+  <p class="note">Set the <code>notesDir</code> plugin setting to a folder that exists on your computer. The default is <code>D:/Claude/token-saver-notes</code>, which only works if you have a D: drive.</p>
+</section>
+
+<section>
+  <h2>What it does</h2>
+  <div class="grid">
+    <div><h3>Compacts early</h3><p>A long conversation is re-read on every turn, so it costs more each time. After a turn ends, once the context passes 150k tokens, the mod compacts it for you.</p></div>
+    <div><h3>Keeps a notes file</h3><p>Each compaction saves its summary to a notes file. The system prompt tells Claude to read that file after compacting, so details are less likely to be lost.</p></div>
+    <div><h3>Cheaper routine steps</h3><p>Planning stays on your chosen model. The follow-up steps of a turn (reading files, running commands) switch to Sonnet or Haiku. Press Boost to turn this off for hard work.</p></div>
+    <div><h3>Caps effort</h3><p>Reasoning effort is held at high unless you set it to Free or Boost. Extra-high effort is where tokens go fastest.</p></div>
+    <div><h3>Trims subagents</h3><p>Subagents default to a cheaper model, and the fork guard refuses to copy a huge conversation into a subagent. Spawn one with a short brief instead.</p></div>
+    <div><h3>Paces your week</h3><p>A toast tells you when weekly usage runs ahead of an even seven-day pace, so the limit doesn't vanish in the first two days.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li><b>1</b><p><strong>Watch.</strong> After each turn the mod reads your context size and your 5-hour and weekly usage from Claude Code.</p></li>
+    <li><b>2</b><p><strong>Switch.</strong> Inside a turn, the first step uses your normal model. Later steps in the same turn use the routine model, unless Boost is on.</p></li>
+    <li><b>3</b><p><strong>Compact.</strong> When context passes the threshold (and 10 minutes have passed since the last compaction), it compacts once the turn is finished, then writes the notes file.</p></li>
+    <li><b>4</b><p><strong>Report.</strong> The bar and the <code>/saver</code> command show the meters, when each resets, and what the mod saved this session: compactions, model switches and refused forks.</p></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Settings menu</h2>
+  <p>Click <strong>⚙ Settings</strong> on the bar. The selected option in each row is drawn as <code>[● choice]</code>.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Setting</th><th>Choices</th><th>What it changes</th></tr></thead>
+    <tbody>
+      <tr><td>Effort</td><td>Capped (high), Free</td><td>Whether reasoning effort is limited to high.</td></tr>
+      <tr><td>Boost</td><td>Off, On</td><td>On keeps your main model and full effort for every step. Use it for a hard fix, then switch it back.</td></tr>
+      <tr><td>Routine steps</td><td>Sonnet, Haiku, Off</td><td>The model for the follow-up steps of a turn.</td></tr>
+      <tr><td>Auto-compact</td><td>100k, 150k, 200k, off</td><td>Context size that triggers compaction.</td></tr>
+      <tr><td>Subagents</td><td>sonnet, haiku, opus, inherit</td><td>Default model for subagents you spawn.</td></tr>
+      <tr><td>Fork guard</td><td>On, Off</td><td>Refuse forks of conversations over 100k tokens.</td></tr>
+      <tr><td>Notes file</td><td>On, Off</td><td>Save and point Claude at the notes file after compaction.</td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <h2>Questions</h2>
+  <h3>Will it make my coding worse?</h3>
+  <p>It can. Sonnet on routine steps is a little less careful than Opus, and any compaction can drop a detail. If a task needs full strength, press Boost, set Effort to Free, or set Routine steps to Off.</p>
+  <h3>How much will it save?</h3>
+  <p>That depends on how you work. For long sessions most of the saving comes from compaction. It hasn't been measured, so treat any number as an estimate.</p>
+  <h3>Does it follow my account to other computers?</h3>
+  <p>No. Plugins and their settings are stored per computer. Install it once on each machine.</p>
+  <h3>Does it work in the terminal, desktop app and VS Code?</h3>
+  <p>It was built and used in the desktop app's Code tab. Other surfaces haven't been tested.</p>
+  <h3>Can I override the built-in /usage?</h3>
+  <p>No. A mod can't replace it, so <code>/saver</code> and the Settings panel show the extra detail instead.</p>
+</section>
+
+<footer>
+  Source and issues: <a href="https://github.com/FelixForLyfe/token-saver">github.com/FelixForLyfe/token-saver</a>. Released under the MIT License. This is an independent community mod.
+</footer>
+</main>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var el=document.getElementById(b.getAttribute('data-copy'));
+    var done=function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)};
+    var fallback=function(){var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected'};
+    try{navigator.clipboard.writeText(el.textContent).then(done,fallback)}catch(e){fallback()}
+  });
+});
+</script>
+</body>
+</html>
