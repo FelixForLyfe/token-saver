@@ -25,7 +25,7 @@ const COMPACT_INSTRUCTIONS = [
 // Module variables start over on a reload; the live settings come back from $.store.
 const run = { lastCompactAt: 0, isCompacting: false }
 const base = {
-  settings: { effort: 'cap', routine: 'sonnet', compactAt: 150000, subagent: 'sonnet', forkGuard: true, notes: true } as Settings,
+  settings: { effort: 'cap', routine: 'sonnet', compactAt: 200000, subagent: 'sonnet', forkGuard: true, notes: true } as Settings,
   effortCap: 'high',
   exploreModel: 'haiku',
   forkGuardTokens: 100000,
@@ -285,7 +285,7 @@ export const register: Register = (on, options) => {
   base.settings = {
     effort: base.effortCap === 'max' ? 'free' : 'cap',
     routine: routine === 'off' || routine === 'haiku' ? routine : 'sonnet',
-    compactAt: numberOption(options, 'compactAtTokens', 150000),
+    compactAt: numberOption(options, 'compactAtTokens', 200000),
     subagent: subagent === 'inherit' || subagent === 'haiku' || subagent === 'opus' ? subagent : 'sonnet',
     forkGuard: base.forkGuardTokens > 0,
     notes: options.notesDefault !== false,
@@ -388,10 +388,25 @@ export const register: Register = (on, options) => {
     const isBoosted = await read($, boostAtom)
     const isCompacting = await read($, compactingAtom)
     const now = await $.clock.now()
-    const { Box, Text, Button } = $.ui.resolve(e)
+    const els = $.ui.resolve(e)
+    const { Box, Text, Button } = els
+    const Input = 'Input' in els ? els.Input : null
     const limit = live.compactAt > 0 ? live.compactAt : 200000
+    const presets = [100000, 150000, 200000, 250000, 500000, 0]
+    const isCustom = !presets.includes(live.compactAt)
+    const setCustom = (text: string) => {
+      const k = Number.parseFloat(text.trim().toLowerCase().replace(/k$/, ''))
+      if (Number.isFinite(k) && k >= 20 && k <= 1000) void change($, { compactAt: Math.round(k * 1000) })
+    }
     const ctx = snap.tokens === null ? 0 : snap.tokens / limit
-    const theirs = await next(e)
+    const below = await next(e)
+    // Another mod's band (ponytail's, for one) shares this slot and may load before or after ours.
+    // Give it a clear gap so the two never read as one row; on the terminal a thin rule, on the desktop a blank line.
+    const theirs = !below ? '' : e.surface === 'terminal' ? (
+      <Box flexDirection="column"><Text dimColor wrap="truncate-end">{'─'.repeat(e.props.bodyColumns)}</Text>{below}</Box>
+    ) : (
+      <Box flexDirection="column" marginTop={1}>{below}</Box>
+    )
 
     const press = () => {
       void update($, compactingAtom, () => true)
@@ -438,12 +453,12 @@ export const register: Register = (on, options) => {
             </Text>
           ))}
           {isCompacting || e.props.isWorking ? '' : (
-            <Button key="compact" plain onPress={press}>
-              <Text inverse={ctx >= 0.7} color={ctx >= 0.7 ? 'warning' : undefined} dimColor={ctx < 0.7}>{' Compact '}</Text>
+            <Button key="ts-compact" plain onPress={press}>
+              <Text inverse={ctx >= 0.7} color={ctx >= 0.7 ? 'warning' : undefined} dimColor={ctx < 0.7}>{' Compact chat '}</Text>
             </Button>
           )}
           {isCompacting ? <Text color="warning">Compacting…</Text> : ''}
-          <Button key="menu" plain onPress={() => void update($, menuAtom, v => !v)}>
+          <Button key="ts-menu" plain onPress={() => void update($, menuAtom, v => !v)}>
             <Text inverse={isOpen} dimColor={!isOpen}>{isOpen ? ' ⚙ Settings ▴ ' : ' ⚙ Settings '}</Text>
           </Button>
         </Box>
@@ -466,9 +481,10 @@ export const register: Register = (on, options) => {
               choice('routine-haiku', 'Haiku', live.routine === 'haiku', set({ routine: 'haiku' })),
               choice('routine-off', 'Off', live.routine === 'off', set({ routine: 'off' }))
             ])}
-            {row('compactAt', 'Auto-compact', 'when the context reaches', [100000, 150000, 200000, 0].map(n =>
+            {row('compactAt', 'Auto-compact', 'when the context reaches', [...presets.map(n =>
               choice(`compact-${n}`, compactLabel(n), live.compactAt === n, set({ compactAt: n }))
-            ))}
+            ), ...(isCustom ? [<Text key="compact-custom" bold color="suggestion">{`[● ${compactLabel(live.compactAt)} custom]`}</Text>] : []),
+            ...(Input ? [<Input key="ts-compact-input" label="custom (k): " placeholder="e.g. 300" onSubmit={setCustom} />] : [])])}
             {row('subagent', 'Subagents', 'default model they run on', (['sonnet', 'haiku', 'opus', 'inherit'] as const).map(m =>
               choice(`sub-${m}`, m, live.subagent === m, set({ subagent: m }))
             ))}

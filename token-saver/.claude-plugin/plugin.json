@@ -1,6 +1,6 @@
 {
   "name": "token-saver",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "license": "MIT",
   "description": "Keeps weekly token usage down (early compaction with a notes file, cheaper models, effort cap, subagent trimming, pacing note) and adds a usage bar with a settings menu above the prompt.",
   "keywords": [
@@ -16,7 +16,7 @@
       "type": "number",
       "title": "Compact when context reaches (tokens)",
       "description": "After a turn ends, compact the conversation once it holds at least this many tokens. 0 turns it off. A long context is re-read on every turn, so this is the biggest saver.",
-      "default": 150000
+      "default": 200000
     },
     "compactCooldownMinutes": {
       "type": "number",

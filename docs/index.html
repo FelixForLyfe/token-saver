@@ -93,7 +93,7 @@ footer{color:var(--muted);font-size:.9rem;border-top:1px solid var(--line);paddi
 <section>
   <h2>What it does</h2>
   <div class="grid">
-    <div><h3>Compacts early</h3><p>A long conversation is re-read on every turn, so it costs more each time. After a turn ends, once the context passes 150k tokens, the mod compacts it for you.</p></div>
+    <div><h3>Compacts early</h3><p>A long conversation is re-read on every turn, so it costs more each time. After a turn ends, once the context passes 200k tokens (the default), the mod compacts it for you.</p></div>
     <div><h3>Keeps a notes file</h3><p>Each compaction saves its summary to a notes file. The system prompt tells Claude to read that file after compacting, so details are less likely to be lost.</p></div>
     <div><h3>Cheaper routine steps</h3><p>Planning stays on your chosen model. The follow-up steps of a turn (reading files, running commands) switch to Sonnet or Haiku. Press Boost to turn this off for hard work.</p></div>
     <div><h3>Caps effort</h3><p>Reasoning effort is held at high unless you set it to Free or Boost. Extra-high effort is where tokens go fastest.</p></div>
@@ -121,7 +121,7 @@ footer{color:var(--muted);font-size:.9rem;border-top:1px solid var(--line);paddi
       <tr><td>Effort</td><td>Capped (high), Free</td><td>Whether reasoning effort is limited to high.</td></tr>
       <tr><td>Boost</td><td>Off, On</td><td>On keeps your main model and full effort for every step. Use it for a hard fix, then switch it back.</td></tr>
       <tr><td>Routine steps</td><td>Sonnet, Haiku, Off</td><td>The model for the follow-up steps of a turn.</td></tr>
-      <tr><td>Auto-compact</td><td>100k, 150k, 200k, off</td><td>Context size that triggers compaction.</td></tr>
+      <tr><td>Auto-compact</td><td>100k, 150k, 200k, 250k, 500k, off, or type your own (in k)</td><td>Context size that triggers compaction.</td></tr>
       <tr><td>Subagents</td><td>sonnet, haiku, opus, inherit</td><td>Default model for subagents you spawn.</td></tr>
       <tr><td>Fork guard</td><td>On, Off</td><td>Refuse forks of conversations over 100k tokens.</td></tr>
       <tr><td>Notes file</td><td>On, Off</td><td>Save and point Claude at the notes file after compaction.</td></tr>

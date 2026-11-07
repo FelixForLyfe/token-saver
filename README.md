@@ -2,10 +2,11 @@
 
 A Claude Code mod that keeps weekly token usage down and adds a compact usage bar above the prompt.
 
-- Compacts the conversation early (default 150k tokens) and saves a notes file so nothing important is lost
+- Compacts the conversation early (default 200k tokens; presets up to 500k, or type your own) and saves a notes file so nothing important is lost
 - Routes routine steps to a cheaper model (Sonnet or Haiku), with a Boost toggle for hard work
 - Caps reasoning effort, trims subagent cost, and refuses forks of huge sessions
 - Usage bar (context, 5-hour, weekly) with a Settings menu; `/saver` prints the full report in chat
+- Shares the slot above the prompt with other bands (tested against ponytail): the other band draws below a rule, and our buttons are namespaced so focus never clashes
 - Pacing toast when weekly usage runs ahead of an even pace
 
 ## Install
