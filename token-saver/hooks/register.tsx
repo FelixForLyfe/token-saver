@@ -398,12 +398,9 @@ export const register: Register = (on, options) => {
           </Button>
         </Box>
         {isOpen ? (
-          <Box flexDirection="column" borderStyle="round" borderColor="suggestion" paddingX={1}>
+          <Box flexDirection="column" paddingX={1}>
             <Box flexDirection="row" columnGap={2}>
               <Text bold color="suggestion">Token saver</Text>
-              <Text dimColor>click an option to apply it now</Text>
-            </Box>
-            <Box flexDirection="column" marginY={1}>
               <Text dimColor>{reportLines(snap, live, (await read($, statsAtom)) as unknown as Stats, now).filter(text => text.startsWith('Saved')).join('')}</Text>
             </Box>
             {row('effort', 'Effort', 'capped keeps /effort from going above the cap', [
@@ -425,11 +422,10 @@ export const register: Register = (on, options) => {
             {row('subagent', 'Subagents', 'default model they run on', (['sonnet', 'haiku', 'opus', 'inherit'] as const).map(m =>
               choice(`sub-${m}`, m, live.subagent === m, set({ subagent: m }))
             ))}
-            {row('forkGuard', 'Fork guard', 'refuse forks of huge sessions', [
+            {row('forkGuard', 'Fork guard', '', [
               choice('fork-on', 'On', live.forkGuard, set({ forkGuard: true })),
-              choice('fork-off', 'Off', !live.forkGuard, set({ forkGuard: false }))
-            ])}
-            {row('notes', 'Notes file', 'saved at each compact, read after', [
+              choice('fork-off', 'Off', !live.forkGuard, set({ forkGuard: false })),
+              <Text key="notes-title" bold>  Notes file</Text>,
               choice('notes-on', 'On', live.notes, set({ notes: true })),
               choice('notes-off', 'Off', !live.notes, set({ notes: false }))
             ])}
