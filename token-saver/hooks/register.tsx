@@ -152,6 +152,56 @@ async function usageText($: Engine): Promise<string> {
   return ['Usage', ...reportLines(snap, live, stats, await $.clock.now())].join('\n')
 }
 
+// What the window carries before you type anything, from the engine's own breakdown.
+async function loadText($: Engine): Promise<string> {
+  const usage = await $.session.usage({ breakdown: 'summary' })
+  const b = usage.context.breakdown
+  if (b === undefined) return 'No context breakdown is available in this session.'
+  const out: string[] = ['What is loading', `Total ${thousands(b.totalTokens)} of ${thousands(b.rawMaxTokens)} (${b.percentage}%)`, '']
+  for (const row of b.categories) out.push(`${row.name.padEnd(28)} ${thousands(row.tokens).padStart(7)}${row.isDeferred ? '  (on demand, not counted)' : ''}`)
+
+  const servers = new Map<string, { tokens: number; tools: number }>()
+  for (const tool of b.mcpTools) {
+    const s = servers.get(tool.serverName) ?? { tokens: 0, tools: 0 }
+    servers.set(tool.serverName, { tokens: s.tokens + tool.tokens, tools: s.tools + 1 })
+  }
+  out.push('', 'Connectors (schema tokens, biggest first)')
+  for (const [name, s] of [...servers].sort((a, c) => c[1].tokens - a[1].tokens).slice(0, 12)) out.push(`${name.slice(0, 34).padEnd(36)} ${thousands(s.tokens).padStart(7)}  ${s.tools} tools`)
+
+  if (b.skills !== undefined) {
+    const groups = new Map<string, { tokens: number; count: number }>()
+    for (const sk of b.skills.skillFrontmatter) {
+      const key = sk.pluginName ?? sk.source
+      const g = groups.get(key) ?? { tokens: 0, count: 0 }
+      groups.set(key, { tokens: g.tokens + sk.tokens, count: g.count + 1 })
+    }
+    out.push('', `Skills listing: ${thousands(b.skills.tokens)} for ${b.skills.totalSkills} skills`)
+    for (const [name, g] of [...groups].sort((a, c) => c[1].tokens - a[1].tokens).slice(0, 8)) out.push(`${name.slice(0, 34).padEnd(36)} ${thousands(g.tokens).padStart(7)}  ${g.count} skills`)
+  }
+  if (b.memoryFiles.length > 0) {
+    out.push('', 'Memory files')
+    for (const f of b.memoryFiles) out.push(`${f.path.slice(-44).padEnd(46)} ${thousands(f.tokens).padStart(6)}`)
+  }
+  out.push('', 'Turn a skill folder off with /saver-off <folder>, back on with /saver-on <folder>. Connectors can only be switched in the app (Settings, Connectors).')
+  return out.join('\n')
+}
+
+// Moves a skill folder out of ~/.claude/skills into D:\Claude\skills-off (or back). Nothing is deleted.
+async function moveSkill($: Engine, name: string, off: boolean): Promise<string> {
+  const folder = name.trim()
+  if (!/^[A-Za-z0-9._-]+$/.test(folder)) return 'Give the skill folder name, e.g. /saver-off marketingskills'
+  const live = `$env:USERPROFILE\\.claude\\skills\\${folder}`
+  const parked = `D:\\Claude\\skills-off\\${folder}`
+  const [from, to] = off ? [live, parked] : [parked, live]
+  const script = `if (-not (Test-Path -LiteralPath "${from}")) { Write-Output "NOTFOUND"; exit 0 }; New-Item -ItemType Directory -Force -Path "D:\\Claude\\skills-off" | Out-Null; if (Test-Path -LiteralPath "${to}") { Write-Output "EXISTS"; exit 0 }; Move-Item -LiteralPath "${from}" -Destination "${to}"; Write-Output "OK"`
+  const res = await $.process.run(['powershell', '-NoProfile', '-Command', script])
+  const said = res.stdout.trim()
+  if (said === 'OK') return `${folder} moved ${off ? 'to D:\\Claude\\skills-off' : 'back into ~/.claude/skills'}. Run /reload-plugins or restart for it to apply.`
+  if (said === 'NOTFOUND') return `No folder named ${folder} ${off ? 'in ~/.claude/skills' : 'in D:\\Claude\\skills-off'}.`
+  if (said === 'EXISTS') return `${folder} already exists at the destination, nothing moved.`
+  return `Could not move ${folder}: ${res.stderr.trim() || 'unknown error'}`
+}
+
 async function bump($: Engine, key: keyof Stats) {
   await update($, statsAtom, v => ({ ...(v as unknown as Stats), [key]: (v as unknown as Stats)[key] + 1 }))
 }
@@ -440,8 +490,15 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'saver', description: 'Usage and token-saver panel' })
+    await $.command.register({ name: 'saver-load', description: 'Show what fills the context before you type' })
+    await $.command.register({ name: 'saver-off', description: 'Park a skill folder on D: so it stops loading' })
+    await $.command.register({ name: 'saver-on', description: 'Bring a parked skill folder back' })
     return next(e)
   })
+
+  on('command.run', { command: 'saver-load' }, async $ => ({ text: await loadText($) }))
+  on('command.run', { command: 'saver-off' }, async ($, e) => ({ text: await moveSkill($, e.args, true) }))
+  on('command.run', { command: 'saver-on' }, async ($, e) => ({ text: await moveSkill($, e.args, false) }))
 
   // /saver opens the panel; /usage opens it too, beside the built-in screen.
   on('command.run', { command: 'saver' }, async $ => ({ text: await usageText($) }))

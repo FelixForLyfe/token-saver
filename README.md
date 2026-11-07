@@ -29,3 +29,9 @@ Set the `notesDir` plugin setting to a folder that exists on your machine (defau
 How it works: https://felixforlyfe.github.io/token-saver/
 
 MIT licensed, see [LICENSE](LICENSE). Contributions welcome.
+
+## Finding what fills your context
+
+- `/saver-load` lists what the window carries before you type: system prompt, connectors, skills, memory files, with token counts.
+- `/saver-off <folder>` moves a skill folder from `~/.claude/skills` to `D:\Claude\skills-off`; `/saver-on <folder>` moves it back. Nothing is deleted. Run `/reload-plugins` afterwards.
+- Connectors can't be switched from a mod. Turn them off in the app's connector settings.
