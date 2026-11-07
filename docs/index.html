@@ -2,150 +2,299 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Token Saver: a Claude Code mod that keeps weekly token usage down.">
-<title>Token Saver</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Token Saver: a Claude Code mod</title>
+<meta name="description" content="Stops long Claude Code sessions from eating your weekly limit. Early compaction with a notes file, cheaper routine steps, an effort cap, and a live usage bar.">
+<meta property="og:title" content="Token Saver">
+<meta property="og:description" content="Stops long Claude Code sessions from eating your weekly limit.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: one narrow reading column, a live-looking usage bar as the hero, then short sections. */
 :root{
-  --bg:#f6f7f4; --surface:#ffffff; --fg:#1d2420; --muted:#5d6a62; --line:#dde2dc;
-  --accent:#0f7a5c; --accent-fg:#ffffff; --warn:#b4650a; --code:#eef1ec;
+  --bg:#080c0a; --bg2:#0d1410; --surface:#111a15; --fg:#e9f0ec; --muted:#93a39a; --line:#1f2c25;
+  --accent:#3fe0a8; --accent-ink:#04180f; --warn:#f0a93b; --bad:#f06a5a; --code:#0a110d;
+  --glow:rgba(63,224,168,.16);
   --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
   --body:'Source Sans 3','Segoe UI',system-ui,sans-serif;
   --mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111613; --surface:#1a211d; --fg:#e7ece8; --muted:#9aa89f; --line:#2a342e;
-  --accent:#3fc59a; --accent-fg:#06231a; --warn:#e9a23b; --code:#202a24; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#111613; --surface:#1a211d; --fg:#e7ece8; --muted:#9aa89f; --line:#2a342e;
-  --accent:#3fc59a; --accent-fg:#06231a; --warn:#e9a23b; --code:#202a24; color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#f5f8f6; --bg2:#ecf2ee; --surface:#ffffff; --fg:#13201a; --muted:#566860; --line:#d6e0da;
+  --accent:#0b7a58; --accent-ink:#ffffff; --warn:#b4650a; --bad:#b3372a; --code:#eef3ef; --glow:rgba(11,122,88,.12); color-scheme:light}}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font:17px/1.6 var(--body);
-  padding-block:48px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-main{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
-h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
-h1{font-size:clamp(2.2rem,6vw,3.2rem);letter-spacing:-.02em}
-h2{font-size:1.6rem;margin-bottom:14px;letter-spacing:-.01em}
-h3{font-size:1.1rem;margin-bottom:4px}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 var(--body);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);line-height:1.08;margin:0;text-wrap:balance}
+h1{font-size:clamp(2.6rem,7.5vw,4.8rem);font-weight:800;letter-spacing:-.035em}
+h2{font-size:clamp(1.7rem,4vw,2.3rem);letter-spacing:-.02em;margin-bottom:14px}
+h3{font-size:1.15rem;margin-bottom:6px}
 p{margin:0 0 12px}
-.lead{font-size:1.2rem;color:var(--muted);max-width:56ch}
-.eyebrow{font:600 .8rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
-code,pre{font-family:var(--mono);font-size:.88rem}
-code{background:var(--code);padding:1px 6px;border-radius:4px}
-.cmd{display:flex;gap:8px;align-items:stretch;margin:10px 0}
-.cmd pre{margin:0;flex:1;min-width:0;overflow-x:auto;background:var(--code);border:1px solid var(--line);border-radius:6px;padding:12px 14px;white-space:pre}
-button{font:600 .9rem var(--body);background:var(--accent);color:var(--accent-fg);border:0;border-radius:6px;padding:0 16px;cursor:pointer}
-button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--accent)}
-/* mock bar */
-.bar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:28px;font:.85rem/1.9 var(--mono);overflow-x:auto}
-.bar .row{display:flex;gap:22px;white-space:nowrap}
-.fill{color:var(--accent)} .hot{color:var(--warn)} .dim{color:var(--muted)}
-.bar small{display:block;font:.75rem var(--body);color:var(--muted);margin-top:6px}
-/* steps & grids */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px 28px}
-.grid>div{min-width:0}
-.grid p{color:var(--muted);margin:0}
-ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px}
-ol.steps li{display:grid;grid-template-columns:auto 1fr;gap:14px}
-ol.steps b{font:600 .85rem var(--mono);color:var(--accent);padding-top:3px}
-ol.steps p{margin:0}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-table{border-collapse:collapse;width:100%;min-width:520px;font-size:.95rem}
-th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+code,pre{font-family:var(--mono);font-size:.88rem}
+code{background:var(--code);border:1px solid var(--line);padding:1px 6px;border-radius:5px}
+.eyebrow{font:600 .78rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+.muted{color:var(--muted)}
+section{padding:72px 0 0}
+
+/* nav */
+nav{display:flex;align-items:center;gap:20px;padding:22px 0}
+nav .brand{display:flex;align-items:center;gap:10px;font:700 1.05rem var(--display);color:var(--fg);text-decoration:none}
+nav .brand img{width:30px;height:30px;border-radius:8px}
+nav .sp{flex:1}
+nav a.l{color:var(--muted);text-decoration:none;font-size:.95rem}
+nav a.l:hover{color:var(--fg)}
+@media(max-width:640px){nav a.l.hide{display:none}}
+
+/* hero */
+.hero{padding:56px 0 8px;position:relative;text-align:center}
+.hero::before{content:"";position:absolute;inset:-80px -10% auto;height:520px;background:radial-gradient(60% 60% at 50% 0%,var(--glow),transparent 70%);pointer-events:none}
+.hero>*{position:relative}
+.hero .lead{font-size:clamp(1.1rem,2.4vw,1.35rem);color:var(--muted);max-width:60ch;margin:22px auto 30px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:26px}
+.badges img{height:20px;display:block}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 1rem var(--body);text-decoration:none;border-radius:10px;padding:12px 22px;border:1px solid var(--line);color:var(--fg);background:var(--surface);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:hover{filter:brightness(1.12)}
+
+/* the live-looking bar */
+.barcard{margin:44px auto 0;max-width:900px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6);text-align:left;overflow:hidden}
+.barcard .cap{font:.72rem var(--mono);color:var(--muted);padding:9px 16px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.bar{padding:16px 18px;font:.88rem/2 var(--mono);display:flex;flex-wrap:wrap;gap:6px 26px;align-items:center}
+.m{display:inline-flex;align-items:center;gap:9px;white-space:nowrap}
+.m b{font-weight:400;color:var(--muted)}
+.track{display:inline-block;width:92px;height:9px;border-radius:5px;background:var(--line);overflow:hidden;vertical-align:middle}
+.track i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.track i.hot{background:var(--warn)}
+.chip{font:.8rem var(--mono);padding:2px 11px;border:1px solid var(--line);border-radius:7px;color:var(--muted);background:var(--bg2)}
+.chip.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.barcard .sub{padding:0 18px 16px;font-size:.85rem;color:var(--muted)}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:56px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.stat strong{display:block;font:800 2.3rem/1 var(--display);letter-spacing:-.03em;color:var(--accent);margin-bottom:6px}
+.stat span{color:var(--muted);font-size:.95rem}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:28px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.card .n{font:600 .75rem var(--mono);color:var(--accent);letter-spacing:.1em;margin-bottom:12px;display:block}
+.card p{color:var(--muted);margin:0}
+
+/* terminal */
+.term{background:var(--code);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:22px}
+.term .top{display:flex;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--bg2);align-items:center}
+.term .top i{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.term .top span{margin-left:8px;font:.75rem var(--mono);color:var(--muted)}
+.term pre{margin:0;padding:18px 20px;overflow-x:auto;line-height:1.7;color:var(--fg)}
+.term .d{color:var(--muted)} .term .g{color:var(--accent)} .term .w{color:var(--warn)}
+.two{display:grid;grid-template-columns:1.05fr 1fr;gap:36px;align-items:center}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+.shot{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{font-size:.85rem;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line)}
+figure{margin:0}
+
+/* steps */
+ol.steps{margin:22px 0 0;padding:0;list-style:none;display:grid;gap:0;border-left:2px solid var(--line);margin-left:14px}
+ol.steps li{position:relative;padding:0 0 24px 30px}
+ol.steps li::before{content:attr(data-n);position:absolute;left:-15px;top:0;width:28px;height:28px;border-radius:50%;background:var(--bg);border:2px solid var(--accent);color:var(--accent);font:600 .8rem/24px var(--mono);text-align:center}
+ol.steps b{font-family:var(--display);font-size:1.1rem}
+ol.steps p{margin:2px 0 0;color:var(--muted)}
+
+/* table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-top:22px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.96rem}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
-th{font:600 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+th{font:600 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--bg2)}
 td:first-child{font-weight:600;white-space:nowrap}
-.note{border-left:3px solid var(--warn);padding:2px 0 2px 14px;color:var(--muted)}
-footer{color:var(--muted);font-size:.9rem;border-top:1px solid var(--line);padding-top:20px}
-@media(prefers-reduced-motion:no-preference){button{transition:filter .15s}button:hover{filter:brightness(1.1)}}
+td:nth-child(2){color:var(--muted);font-family:var(--mono);font-size:.85rem}
+
+/* install */
+.install{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;margin-top:22px}
+.cmd{display:flex;gap:8px;align-items:stretch;margin:12px 0}
+.cmd pre{margin:0;flex:1;min-width:0;overflow-x:auto;background:var(--code);border:1px solid var(--line);border-radius:9px;padding:13px 16px;white-space:pre}
+.cmd button{font:600 .9rem var(--body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:0 20px;cursor:pointer}
+.note{border-left:3px solid var(--warn);padding:2px 0 2px 14px;color:var(--muted);margin-top:16px}
+
+/* faq */
+details{border-bottom:1px solid var(--line);padding:16px 0}
+details:first-of-type{border-top:1px solid var(--line);margin-top:22px}
+summary{cursor:pointer;font:700 1.08rem var(--display);list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--accent);font-family:var(--mono)}
+details[open] summary::after{content:"–"}
+details p{color:var(--muted);margin:10px 0 0;max-width:70ch}
+
+footer{margin-top:88px;border-top:1px solid var(--line);padding:28px 0 56px;color:var(--muted);font-size:.92rem;display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between}
+@media(prefers-reduced-motion:no-preference){.btn,.card,.stat{transition:transform .18s,border-color .18s}.card:hover,.stat:hover{transform:translateY(-3px);border-color:var(--accent)}}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<main>
-<header>
+<nav>
+  <a class="brand" href="#top"><img src="assets/logo.svg" alt="">Token Saver</a>
+  <span class="sp"></span>
+  <a class="l hide" href="#levers">Features</a>
+  <a class="l hide" href="#load">What loads</a>
+  <a class="l hide" href="#settings">Settings</a>
+  <a class="l" href="https://github.com/FelixForLyfe/token-saver">GitHub</a>
+</nav>
+
+<header class="hero" id="top">
   <div class="eyebrow">A Claude Code mod</div>
-  <h1>Token Saver</h1>
-  <p class="lead">Stops long sessions from eating your weekly limit. It compacts early, uses a cheaper model for routine steps, and puts a usage bar above your prompt so you can see where you stand.</p>
-  <div class="bar" aria-label="Example of the usage bar">
-    <div class="row">
-      <span>Context <span class="fill">▰▰▰▰▰▰</span><span class="dim">▱▱▱▱</span> 96k</span>
-      <span>5-hour <span class="fill">▰▰</span><span class="dim">▱▱▱▱▱▱▱▱</span> 21%</span>
-      <span>Week <span class="hot">▰▰▰▰▰▰▰</span><span class="dim">▱▱▱</span> 68%</span>
-      <span>[Compact] [⚙ Settings]</span>
+  <h1>Your weekly limit, <em>stretched</em>.</h1>
+  <p class="lead">Long sessions get more expensive on every turn. Token Saver compacts early, hands routine steps to a cheaper model, caps runaway effort, and keeps a usage bar above your prompt so you always know where you stand.</p>
+  <div class="cta">
+    <a class="btn primary" href="#install">Install in one line</a>
+    <a class="btn" href="https://github.com/FelixForLyfe/token-saver">View on GitHub</a>
+  </div>
+  <div class="badges">
+    <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-3fe0a8?style=flat-square&labelColor=0c1511">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/FelixForLyfe/token-saver?style=flat-square&color=3fe0a8&labelColor=0c1511">
+    <img alt="Version" src="https://img.shields.io/badge/version-0.4.8-3fe0a8?style=flat-square&labelColor=0c1511">
+    <img alt="Claude Code mod" src="https://img.shields.io/badge/Claude%20Code-mod-3fe0a8?style=flat-square&labelColor=0c1511">
+  </div>
+
+  <div class="barcard" aria-label="Example of the usage bar">
+    <div class="cap">Above your prompt (example)</div>
+    <div class="bar">
+      <span class="m"><b>Context</b><span class="track"><i style="width:48%"></i></span>96k / 200k</span>
+      <span class="m"><b>5-hour</b><span class="track"><i style="width:21%"></i></span>21%</span>
+      <span class="m"><b>Week</b><span class="track"><i class="hot" style="width:68%"></i></span>68%</span>
+      <span class="chip">Compact chat</span>
+      <span class="chip on">⚙ Settings</span>
     </div>
-    <small>Example only. The real bar sits above your prompt and updates as you work.</small>
+    <div class="sub">The real bar updates after every turn, and the gear opens the settings menu.</div>
   </div>
 </header>
 
-<section>
-  <h2>Install</h2>
-  <p>Type this at the prompt of a Claude Code terminal session, then answer <code>y</code> to add the marketplace and pick a scope:</p>
-  <div class="cmd"><pre id="c1">/plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c1">Copy</button></div>
-  <p>Or from a shell:</p>
-  <div class="cmd"><pre id="c2">claude plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c2">Copy</button></div>
-  <p class="note">Set the <code>notesDir</code> plugin setting to a folder that exists on your computer. The default is <code>D:/Claude/token-saver-notes</code>, which only works if you have a D: drive.</p>
+<div class="stats">
+  <div class="stat"><strong>6</strong><span>levers that cut token burn: compaction, notes, cheaper steps, effort cap, subagents, pacing</span></div>
+  <div class="stat"><strong>200k</strong><span>default compaction point. Presets to 500k, or type your own</span></div>
+  <div class="stat"><strong>0</strong><span>files deleted. Skills and notes are moved or written, never destroyed</span></div>
+  <div class="stat"><strong>MIT</strong><span>open source, one plugin, installs with a single command</span></div>
+</div>
+
+<section id="levers">
+  <div class="eyebrow">What it does</div>
+  <h2>Six levers, all adjustable.</h2>
+  <p class="muted">Each one is on by default and can be turned off from the Settings menu.</p>
+  <div class="grid">
+    <div class="card"><span class="n">01</span><h3>Compacts early</h3><p>A long conversation is re-read on every turn. Once the context passes your threshold, the mod compacts it after the turn ends.</p></div>
+    <div class="card"><span class="n">02</span><h3>Keeps a notes file</h3><p>Each compaction saves its summary to a notes file, and the system prompt points Claude at it afterwards, so details are less likely to be lost.</p></div>
+    <div class="card"><span class="n">03</span><h3>Cheaper routine steps</h3><p>Planning stays on your chosen model. The follow-up steps of a turn run on Sonnet or Haiku. Press Boost for hard work.</p></div>
+    <div class="card"><span class="n">04</span><h3>Caps effort</h3><p>Reasoning effort is held at high unless you set it to Free. Extra-high effort is where tokens go fastest.</p></div>
+    <div class="card"><span class="n">05</span><h3>Trims subagents</h3><p>Subagents default to a cheaper model, and the fork guard refuses to copy a huge conversation into one.</p></div>
+    <div class="card"><span class="n">06</span><h3>Paces your week</h3><p>A note tells you when weekly usage runs ahead of an even seven-day pace, before the limit is gone.</p></div>
+  </div>
 </section>
 
-<section>
-  <h2>What it does</h2>
-  <div class="grid">
-    <div><h3>Compacts early</h3><p>A long conversation is re-read on every turn, so it costs more each time. After a turn ends, once the context passes 200k tokens (the default), the mod compacts it for you.</p></div>
-    <div><h3>Keeps a notes file</h3><p>Each compaction saves its summary to a notes file. The system prompt tells Claude to read that file after compacting, so details are less likely to be lost.</p></div>
-    <div><h3>Cheaper routine steps</h3><p>Planning stays on your chosen model. The follow-up steps of a turn (reading files, running commands) switch to Sonnet or Haiku. Press Boost to turn this off for hard work.</p></div>
-    <div><h3>Caps effort</h3><p>Reasoning effort is held at high unless you set it to Free or Boost. Extra-high effort is where tokens go fastest.</p></div>
-    <div><h3>Trims subagents</h3><p>Subagents default to a cheaper model, and the fork guard refuses to copy a huge conversation into a subagent. Spawn one with a short brief instead.</p></div>
-    <div><h3>Paces your week</h3><p>A toast tells you when weekly usage runs ahead of an even seven-day pace, so the limit doesn't vanish in the first two days.</p></div>
+<section id="load">
+  <div class="eyebrow">New in 0.4</div>
+  <h2>See exactly what fills your context.</h2>
+  <p class="muted">Most of a fresh session is fixed overhead: system prompt, tools, skills. <code>/saver-load</code> breaks it down by connector and skill, so you can park what you don't use.</p>
+  <div class="term">
+    <div class="top"><i></i><i></i><i></i><span>/saver-load</span></div>
+<pre><span class="g">token-saver: What is loading</span>
+Total 106k of 1000k (11%)
+
+System prompt                    11k
+System tools                     37k
+MCP tools                        19k
+MCP tools (deferred)            <span class="d">120k  (on demand, not counted)</span>
+Skills                            9k
+Messages                         27k
+
+<span class="g">Connectors (schema tokens, biggest first)</span>
+computer-use                     21k  27 tools
+plugin_pixel-plugin_aseprite     20k  50 tools
+claude-in-chrome                 15k  20 tools
+
+<span class="d">Turn a skill folder off with /saver-off &lt;folder&gt;, back on with /saver-on &lt;folder&gt;.</span></pre>
   </div>
 </section>
 
 <section>
-  <h2>How it works</h2>
-  <ol class="steps">
-    <li><b>1</b><p><strong>Watch.</strong> After each turn the mod reads your context size and your 5-hour and weekly usage from Claude Code.</p></li>
-    <li><b>2</b><p><strong>Switch.</strong> Inside a turn, the first step uses your normal model. Later steps in the same turn use the routine model, unless Boost is on.</p></li>
-    <li><b>3</b><p><strong>Compact.</strong> When context passes the threshold (and 10 minutes have passed since the last compaction), it compacts once the turn is finished, then writes the notes file.</p></li>
-    <li><b>4</b><p><strong>Report.</strong> The bar and the <code>/saver</code> command show the meters, when each resets, and what the mod saved this session: compactions, model switches and refused forks.</p></li>
-  </ol>
+  <div class="two">
+    <div>
+      <div class="eyebrow">How it works</div>
+      <h2>Watch, switch, compact, report.</h2>
+      <ol class="steps">
+        <li data-n="1"><b>Watch</b><p>After each turn the mod reads your context size and your 5-hour and weekly usage.</p></li>
+        <li data-n="2"><b>Switch</b><p>The first step uses your normal model. Later steps in the turn use the routine model, unless Boost is on.</p></li>
+        <li data-n="3"><b>Compact</b><p>Past the threshold, and ten minutes after the last one, it compacts once the turn is done, then writes the notes file.</p></li>
+        <li data-n="4"><b>Report</b><p><code>/saver</code> shows the meters, resets, and what the mod saved this session.</p></li>
+      </ol>
+    </div>
+    <figure class="shot">
+      <img src="assets/bar.png" alt="The Token Saver bar above the prompt: context, 5-hour and weekly meters, with Compact and Settings buttons" loading="lazy">
+      <figcaption>The real bar, running above the prompt.</figcaption>
+    </figure>
+  </div>
 </section>
 
-<section>
-  <h2>Settings menu</h2>
-  <p>Click <strong>⚙ Settings</strong> on the bar. The selected option in each row is drawn as <code>[● choice]</code>.</p>
+<section id="settings">
+  <div class="eyebrow">Settings menu</div>
+  <h2>Everything in one gear.</h2>
+  <p class="muted">Click <strong>⚙ Settings</strong> on the bar. The selected option in each row shows as <code>[● choice]</code>.</p>
   <div class="tablewrap"><table>
     <thead><tr><th>Setting</th><th>Choices</th><th>What it changes</th></tr></thead>
     <tbody>
       <tr><td>Effort</td><td>Capped (high), Free</td><td>Whether reasoning effort is limited to high.</td></tr>
-      <tr><td>Boost</td><td>Off, On</td><td>On keeps your main model and full effort for every step. Use it for a hard fix, then switch it back.</td></tr>
+      <tr><td>Boost</td><td>Off, On</td><td>Keeps your main model and full effort for the next turn. Use it for a hard fix.</td></tr>
       <tr><td>Routine steps</td><td>Sonnet, Haiku, Off</td><td>The model for the follow-up steps of a turn.</td></tr>
-      <tr><td>Auto-compact</td><td>100k, 150k, 200k, 250k, 500k, off, or type your own (in k)</td><td>Context size that triggers compaction.</td></tr>
+      <tr><td>Auto-compact</td><td>100k, 150k, 200k, 250k, 500k, off, or your own</td><td>Context size that triggers compaction. Type a number in thousands for a custom value.</td></tr>
       <tr><td>Subagents</td><td>sonnet, haiku, opus, inherit</td><td>Default model for subagents you spawn.</td></tr>
       <tr><td>Fork guard</td><td>On, Off</td><td>Refuse forks of conversations over 100k tokens.</td></tr>
-      <tr><td>Notes file</td><td>On, Off</td><td>Save and point Claude at the notes file after compaction.</td></tr>
+      <tr><td>Notes file</td><td>On, Off</td><td>Save the compaction summary and point Claude at it.</td></tr>
     </tbody></table></div>
 </section>
 
 <section>
-  <h2>Questions</h2>
-  <h3>Will it make my coding worse?</h3>
-  <p>It can. Sonnet on routine steps is a little less careful than Opus, and any compaction can drop a detail. If a task needs full strength, press Boost, set Effort to Free, or set Routine steps to Off.</p>
-  <h3>How much will it save?</h3>
-  <p>That depends on how you work. For long sessions most of the saving comes from compaction. It hasn't been measured, so treat any number as an estimate.</p>
-  <h3>Does it follow my account to other computers?</h3>
-  <p>No. Plugins and their settings are stored per computer. Install it once on each machine.</p>
-  <h3>Does it work in the terminal, desktop app and VS Code?</h3>
-  <p>It was built and used in the desktop app's Code tab. Other surfaces haven't been tested.</p>
-  <h3>Can I override the built-in /usage?</h3>
-  <p>No. A mod can't replace it, so <code>/saver</code> and the Settings panel show the extra detail instead.</p>
+  <div class="eyebrow">Plays well with others</div>
+  <h2>Shares the bar slot politely.</h2>
+  <p class="muted">Other mods can draw above the prompt too. Token Saver stacks with them instead of replacing them, separates the two bands with a rule, and namespaces its buttons so keyboard focus never clashes. Tested alongside <a href="https://github.com/DietrichGebert/ponytail">Ponytail</a>: Ponytail changes how Claude writes, Token Saver changes how it runs, so they don't compete.</p>
+</section>
+
+<section id="install">
+  <div class="eyebrow">Install</div>
+  <h2>One line, then pick a folder.</h2>
+  <div class="install">
+    <p>Type this at the prompt of a Claude Code session, answer <code>y</code> to add the marketplace, and pick a scope:</p>
+    <div class="cmd"><pre id="c1">/plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c1">Copy</button></div>
+    <p>Or from a shell:</p>
+    <div class="cmd"><pre id="c2">claude plugin install token-saver --marketplace FelixForLyfe/token-saver</pre><button data-copy="c2">Copy</button></div>
+    <p class="note">Set the <code>notesDir</code> plugin setting to a folder that exists on your computer. The default is <code>D:/Claude/token-saver-notes</code>, which only works with a D: drive.</p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Honest answers</div>
+  <h2>Questions.</h2>
+  <details><summary>Will it make my coding worse?</summary><p>It can. Sonnet on routine steps is a little less careful than Opus, and any compaction can drop a detail. If a task needs full strength, press Boost, set Effort to Free, or set Routine steps to Off.</p></details>
+  <details><summary>How much will it save?</summary><p>That depends on how you work, and it hasn't been measured, so treat any number as an estimate. For long sessions most of the saving comes from compaction.</p></details>
+  <details><summary>Does it follow my account to other computers?</summary><p>No. Plugins and their settings are stored per computer, so install it once on each machine.</p></details>
+  <details><summary>Does it work in the terminal, desktop app and VS Code?</summary><p>It was built and used in the desktop app's Code tab, and it also loads in the Linen IDE. The terminal and VS Code haven't been tested, and the bar may not draw on every surface. The commands and the compaction do not depend on the bar.</p></details>
+  <details><summary>Can it switch my connectors off?</summary><p>No. A mod can't toggle connectors. <code>/saver-load</code> shows which ones cost the most so you can switch them off in the app yourself.</p></details>
+  <details><summary>Can I override the built-in /usage?</summary><p>No. A mod can't replace it, so <code>/saver</code> and the Settings panel show the extra detail instead.</p></details>
 </section>
 
 <footer>
-  Source and issues: <a href="https://github.com/FelixForLyfe/token-saver">github.com/FelixForLyfe/token-saver</a>. Released under the MIT License. This is an independent community mod.
+  <span>Token Saver is an independent community mod, MIT licensed.</span>
+  <span><a href="https://github.com/FelixForLyfe/token-saver">Source and issues on GitHub</a></span>
 </footer>
-</main>
+</div>
 
 <script>
 document.querySelectorAll('[data-copy]').forEach(function(b){

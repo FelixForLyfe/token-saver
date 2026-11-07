@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Token Saver logo">
+  <rect width="128" height="128" rx="28" fill="#0c1511"/>
+  <rect x="20" y="26" width="88" height="14" rx="7" fill="#3fe0a8"/>
+  <rect x="20" y="50" width="66" height="14" rx="7" fill="#3fe0a8" opacity=".75"/>
+  <rect x="20" y="74" width="44" height="14" rx="7" fill="#3fe0a8" opacity=".5"/>
+  <rect x="20" y="98" width="22" height="14" rx="7" fill="#3fe0a8" opacity=".3"/>
+</svg>
