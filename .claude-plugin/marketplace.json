@@ -1,0 +1,11 @@
+{
+  "name": "token-saver-mods",
+  "owner": { "name": "felix" },
+  "plugins": [
+    {
+      "name": "token-saver",
+      "source": "./token-saver",
+      "description": "Keeps weekly token usage down: compacts long contexts early, routes routine steps to a cheaper model, caps effort, trims subagent cost, and notes your weekly pace."
+    }
+  ]
+}

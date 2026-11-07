@@ -1,0 +1,107 @@
+{
+  "name": "token-saver",
+  "version": "0.4.4",
+  "description": "Keeps weekly token usage down (early compaction with a notes file, cheaper models, effort cap, subagent trimming, pacing note) and adds a usage bar with a settings menu above the prompt.",
+  "license": "MIT",
+  "keywords": [
+    "claude-code-mods",
+    "claude-mods",
+    "function-hooks",
+    "tokens",
+    "context",
+    "usage"
+  ],
+  "userConfig": {
+    "compactAtTokens": {
+      "type": "number",
+      "title": "Compact when context reaches (tokens)",
+      "description": "After a turn ends, compact the conversation once it holds at least this many tokens. 0 turns it off. A long context is re-read on every turn, so this is the biggest saver.",
+      "default": 150000
+    },
+    "compactCooldownMinutes": {
+      "type": "number",
+      "title": "Minutes between automatic compacts",
+      "description": "Stops a compact loop when the summary alone is still over the limit.",
+      "default": 10
+    },
+    "routineModel": {
+      "type": "string",
+      "title": "Model for routine steps",
+      "description": "While the session runs on Opus, steps that follow a tool result (reading, editing, running commands) use this model. The first step after your message stays on Opus. off keeps Opus for everything. Switching models rewrites the prompt cache once per switch.",
+      "options": [
+        "off",
+        "sonnet",
+        "haiku"
+      ],
+      "default": "sonnet"
+    },
+    "effortCap": {
+      "type": "string",
+      "title": "Highest thinking effort",
+      "description": "Requests above this level are lowered to it. max leaves effort alone.",
+      "options": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default": "high"
+    },
+    "subagentModel": {
+      "type": "string",
+      "title": "Model for subagents",
+      "description": "Used when the Agent call names no model. inherit keeps the parent's model.",
+      "options": [
+        "inherit",
+        "haiku",
+        "sonnet",
+        "opus"
+      ],
+      "default": "sonnet"
+    },
+    "exploreModel": {
+      "type": "string",
+      "title": "Model for Explore subagents",
+      "description": "Used for read-only search subagents when the call names no model.",
+      "options": [
+        "inherit",
+        "haiku",
+        "sonnet",
+        "opus"
+      ],
+      "default": "haiku"
+    },
+    "forkGuardTokens": {
+      "type": "number",
+      "title": "Refuse forks above (tokens)",
+      "description": "A fork copies the whole conversation into the subagent. Above this size the fork is refused and Claude is told to brief a fresh subagent instead. 0 turns it off.",
+      "default": 100000
+    },
+    "paceStepPercent": {
+      "type": "number",
+      "title": "Pacing note every (% of weekly limit)",
+      "description": "Shows a one-line pacing note each time weekly usage passes another multiple of this. 0 turns it off.",
+      "default": 5
+    },
+    "showBar": {
+      "type": "boolean",
+      "title": "Show usage bar above the prompt",
+      "description": "One compact row: context size, 5-hour and weekly limits with time to reset, and a Compact button.",
+      "default": true
+    },
+    "notesDir": {
+      "type": "string",
+      "title": "Folder for the notes files",
+      "description": "One notes file per session: the last compaction summary plus standing notes Claude keeps. Keep it on D:.",
+      "default": "D:/Claude/token-saver-notes"
+    },
+    "notesDefault": {
+      "type": "boolean",
+      "title": "Notes file on by default",
+      "description": "Also switchable live in the bar's settings menu.",
+      "default": true
+    }
+  },
+  "types": "./types/index.d.ts"
+}
