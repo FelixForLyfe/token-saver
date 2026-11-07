@@ -404,9 +404,7 @@ export const register: Register = (on, options) => {
               <Text dimColor>click an option to apply it now</Text>
             </Box>
             <Box flexDirection="column" marginY={1}>
-              {reportLines(snap, live, (await read($, statsAtom)) as unknown as Stats, now).map((text, at) => (
-                <Text key={`r${at}`} dimColor={text.startsWith('Saved')}>{text}</Text>
-              ))}
+              <Text dimColor>{reportLines(snap, live, (await read($, statsAtom)) as unknown as Stats, now).filter(text => text.startsWith('Saved')).join('')}</Text>
             </Box>
             {row('effort', 'Effort', 'capped keeps /effort from going above the cap', [
               choice('effort-cap', `Capped (${base.effortCap})`, live.effort === 'cap', set({ effort: 'cap' })),
